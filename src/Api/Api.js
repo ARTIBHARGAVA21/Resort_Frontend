@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://resort-project-j023.onrender.com";
+const API_BASE_URL = "https://resort-project-j023.onrender.com/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
