@@ -9,9 +9,9 @@ import SafariBooking from './Components/Resorts/SafariBooking.jsx';
 import Error from './Components/Sections/Error.jsx';
 import HotelDetails from './Utils/HotelDetails.jsx';
 import Mainpage from './Components/Sections/Mainpage.jsx';
-import Services  from './Components/Resorts/service.jsx';
-import Contact from './Components/Resorts/contact.jsx';
-import About from './Components/Resorts/about.jsx';
+import Services  from './Components/Resorts/Service.jsx';
+import Contact from './Components/Resorts/Contact.jsx';
+import About from './Components/Resorts/About.jsx';
 import Booking from './Components/Resorts/Booking.jsx';
 import HotelPage from './Components/Resorts/HotelPage.jsx';
 
