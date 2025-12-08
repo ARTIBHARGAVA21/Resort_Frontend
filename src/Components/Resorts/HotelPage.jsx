@@ -1,18 +1,54 @@
-// src/pages/HotelPage.jsx
+// src/pages/HotelPage.jsx (or src/Components/Resorts/HotelPage.jsx)
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import hotels from "../../data/hotelsData";
+// ⬇️ Adjust this path as per your project structure
+import api from "../../Api/Api";
 
+// Small reusable auto-image slider (used in "Similar Resorts")
+function AutoImageSlider({ images = [], className = "", alt = "" }) {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    if (!images || images.length < 2) return; // nothing to slide
+
+    const id = setInterval(() => {
+      setIndex((prev) => (prev + 1) % images.length);
+    }, 3000); // 3 seconds
+
+    return () => clearInterval(id);
+  }, [images]);
+
+  if (!images || images.length === 0) {
+    return (
+      <div
+        className={
+          "bg-gray-100 flex items-center justify-center " + className
+        }
+      >
+        <span className="text-gray-400 text-xs">No image</span>
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={images[index]}
+      alt={alt}
+      className={className + " object-cover"}
+    />
+  );
+}
 
 export default function HotelPage() {
-  const { id } = useParams();
-  const hotel = hotels[id];
+  const { id } = useParams();             // hotel id from URL
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedRoom, setSelectedRoom] = useState(
-    hotel?.roomTypes?.[0]?.id || ""
-  );
+  const [hotel, setHotel] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [similarResorts, setSimilarResorts] = useState([]);
+
+  const [currentIndex, setCurrentIndex] = useState(0); // main slider index
+  const [selectedRoom, setSelectedRoom] = useState(""); // room id
 
   const [activeTab, setActiveTab] = useState("overview");
   const [showForm, setShowForm] = useState(false);
@@ -24,15 +60,113 @@ export default function HotelPage() {
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
 
-  if (!hotel) return <h1 className="text-center mt-20">Hotel Not Found</h1>;
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // 🔄 Fetch hotel + rooms from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        // 1) Get hotel by ID: /all-hotels/:id/
+        const hotelRes = await api.getHotelById(id);
+        const h = hotelRes.data;
+        setHotel(h);
+
+        // 2) Determine star rating from hotel object
+        //    Adjust these property names to match your API response
+        const star =
+          h.star_rating || h.stars || h.category || h.star || 5; // fallback to 5-star
+
+        // 3) Get rooms by hotel + star: /hotels/{star}-star/:hotelId/rooms/
+        const roomsRes = await api.getRoomsByHotel(h.id, star);
+        const roomList = roomsRes.data || [];
+        setRooms(roomList);
+
+        // 4) Default selected room = first room (if any)
+        if (roomList.length > 0) {
+          setSelectedRoom(roomList[0].id);
+        }
+
+        // 5) (Optional) get all hotels and build "similar resorts"
+        try {
+          const allHotelsRes = await api.getAllHotels();
+          const allHotels = allHotelsRes.data || [];
+          const others = allHotels.filter((item) => item.id !== h.id);
+          setSimilarResorts(others);
+        } catch {
+          // ignore similar resorts errors
+        }
+      } catch (err) {
+        console.error(err);
+        setError("Failed to load hotel details. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [id]);
+
+  // When user switches room, reset slider index
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [selectedRoom]);
+
+  if (loading) {
+    return (
+      <div className="pt-44 pb-10 px-4 max-w-6xl mx-auto">
+        <p className="text-center text-gray-600">Loading hotel details...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="pt-44 pb-10 px-4 max-w-6xl mx-auto">
+        <p className="text-center text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  if (!hotel) {
+    return (
+      <h1 className="text-center mt-20">
+        Hotel Not Found
+      </h1>
+    );
+  }
+
+  // 🔍 Get selected room object from room API data
+  const selectedRoomObj = rooms.find(
+    (room) => String(room.id) === String(selectedRoom)
+  );
+
+  // 🔁 IMAGES: Prefer room images; fallback to hotel images
+  const roomImages = selectedRoomObj?.images || [];
+  const hotelImages = hotel.images || [];
+  const images = roomImages.length > 0 ? roomImages : hotelImages;
+
+  // 🔁 Auto–change main image every 4 seconds
+  useEffect(() => {
+    if (!images || images.length < 2) return;
+
+    const id = setInterval(() => {
+      setCurrentIndex((prev) =>
+        prev === images.length - 1 ? 0 : prev + 1
+      );
+    }, 4000);
+
+    return () => clearInterval(id);
+  }, [images.length]);
 
   const nextSlide = () =>
-    setCurrentIndex((p) => (p === hotel.images.length - 1 ? 0 : p + 1));
+    setCurrentIndex((p) => (p === images.length - 1 ? 0 : p + 1));
 
   const prevSlide = () =>
-    setCurrentIndex((p) => (p === 0 ? hotel.images.length - 1 : p - 1));
-
-  const similarResorts = Object.entries(hotels).filter(([key]) => key !== id);
+    setCurrentIndex((p) => (p === 0 ? images.length - 1 : p - 1));
 
   const handleBookingSubmit = (e) => {
     e.preventDefault();
@@ -52,26 +186,38 @@ export default function HotelPage() {
     <div className="pt-44 pb-10 px-4 max-w-6xl mx-auto">
       {/* TOP: Slider + Main Info */}
       <div className="flex flex-col lg:flex-row gap-10">
-        {/* SLIDER */}
+        {/* MAIN IMAGE SLIDER (auto + buttons) */}
         <div className="lg:w-1/2 relative rounded-xl overflow-hidden shadow-xl bg-white">
-          <img
-            src={hotel.images[currentIndex]}
-            className="w-full h-[480px] object-cover rounded-xl"
-            alt={hotel.name}
-          />
+          {images.length > 0 ? (
+            <>
+              <img
+                src={images[currentIndex]}
+                className="w-full h-[480px] object-cover rounded-xl"
+                alt={hotel.name}
+              />
 
-          <button
-            onClick={prevSlide}
-            className="absolute top-1/2 left-3 -translate-y-1/2 bg-white/80 px-3 py-2 rounded-full shadow"
-          >
-            ❮
-          </button>
-          <button
-            onClick={nextSlide}
-            className="absolute top-1/2 right-3 -translate-y-1/2 bg-white/80 px-3 py-2 rounded-full shadow"
-          >
-            ❯
-          </button>
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevSlide}
+                    className="absolute top-1/2 left-3 -translate-y-1/2 bg-white/80 px-3 py-2 rounded-full shadow"
+                  >
+                    ❮
+                  </button>
+                  <button
+                    onClick={nextSlide}
+                    className="absolute top-1/2 right-3 -translate-y-1/2 bg-white/80 px-3 py-2 rounded-full shadow"
+                  >
+                    ❯
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="w-full h-[480px] flex items-center justify-center bg-gray-100 rounded-xl">
+              <span className="text-gray-500">No images available</span>
+            </div>
+          )}
         </div>
 
         {/* DETAILS */}
@@ -91,7 +237,9 @@ export default function HotelPage() {
           </div>
 
           <div className="flex items-center gap-4 mt-4 flex-wrap">
-            <span className="text-2xl font-semibold">From ₹ {hotel.price}</span>
+            <span className="text-2xl font-semibold">
+              From ₹ {hotel.price}
+            </span>
 
             <button
               onClick={() => setShowForm(true)}
@@ -120,19 +268,29 @@ export default function HotelPage() {
             <span>BOOK NOW</span>
           </div>
 
-          {hotel.roomTypes?.map((room) => (
+          {rooms.map((room) => (
             <div
               key={room.id}
               className="grid grid-cols-3 items-center border-t text-center text-sm md:text-base"
             >
-              <div className="py-4 font-medium">{room.name}</div>
-              <div className="py-4 font-semibold">₹ {room.price}</div>
+              <div className="py-4 font-medium">
+                {room.name || room.room_type || `Room ${room.id}`}
+              </div>
+              <div className="py-4 font-semibold">
+                ₹ {room.price || room.rate || "-"}
+              </div>
               <div className="py-4">
                 <button
                   onClick={() => setSelectedRoom(room.id)}
-                  className="px-3 py-1.5 bg-blue-600 text-white text-xs md:text-sm rounded-md hover:bg-blue-700"
+                  className={`px-3 py-1.5 text-xs md:text-sm rounded-md ${
+                    String(selectedRoom) === String(room.id)
+                      ? "bg-blue-700 text-white"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                  }`}
                 >
-                  BOOK NOW
+                  {String(selectedRoom) === String(room.id)
+                    ? "SELECTED"
+                    : "BOOK NOW"}
                 </button>
               </div>
             </div>
@@ -159,9 +317,9 @@ export default function HotelPage() {
                 className="w-full border rounded-md px-3 py-2 text-sm"
               >
                 <option value="">— Please choose an option —</option>
-                {hotel.roomTypes?.map((room) => (
+                {rooms.map((room) => (
                   <option key={room.id} value={room.id}>
-                    {room.name}
+                    {room.name || room.room_type || `Room ${room.id}`}
                   </option>
                 ))}
               </select>
@@ -294,7 +452,7 @@ export default function HotelPage() {
 
           {activeTab === "gallery" && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {hotel.images.map((img, i) => (
+              {images.map((img, i) => (
                 <img
                   key={i}
                   src={img}
@@ -307,54 +465,46 @@ export default function HotelPage() {
         </div>
       </div>
 
-{/* SIMILAR RESORTS */}
-<div className="mt-10 w-full">
-  <h2 className="text-2xl font-semibold mb-4">Similar Resorts</h2>
+      {/* SIMILAR RESORTS */}
+      <div className="mt-10 w-full">
+        <h2 className="text-2xl font-semibold mb-4">Similar Resorts</h2>
 
-  {/* vertical full-width cards like screenshot */}
-  <div className="flex flex-col gap-3">
-    {similarResorts.map(([key, h]) => (
-      <div
-        key={key}
-        className="flex w-full border border-sky-500 bg-sky-50 overflow-hidden"
-      >
-        {/* image on left */}
-        <div className="w-32 md:w-40 h-20 md:h-24 flex-shrink-0">
-          <img
-            src={h.images[0]}
-            alt={h.name}
-            className="w-full h-full object-cover"
-          />
-        </div>
+        <div className="flex flex-col gap-3">
+          {similarResorts.map((h) => (
+            <div
+              key={h.id}
+              className="flex w-full border border-sky-500 bg-sky-50 overflow-hidden"
+            >
+              {/* Left image: auto slider */}
+              <div className="w-32 md:w-40 h-20 md:h-24 flex-shrink-0">
+                <AutoImageSlider
+                  images={h.images || []}
+                  alt={h.name}
+                  className="w-full h-full"
+                />
+              </div>
 
-        {/* text on right */}
-        <div className="flex-1 px-4 py-2">
-          {/* stars */}
-          <div className="flex items-center gap-1 text-yellow-400 text-xs md:text-sm mb-1">
-            {[...Array(5)].map((_, i) => (
-              <span key={i}>★</span>
-            ))}
-          </div>
+              {/* Right text */}
+              <div className="flex-1 px-4 py-2">
+                <div className="flex items-center gap-1 text-yellow-400 text-xs md:text-sm mb-1">
+                  {[...Array(5)].map((_, i) => (
+                    <span key={i}>★</span>
+                  ))}
+                </div>
 
-          {/* resort name */}
-          <div className="text-sky-700 font-semibold text-sm md:text-base">
-            {h.name}
-          </div>
+                <div className="text-sky-700 font-semibold text-sm md:text-base">
+                  {h.name}
+                </div>
 
-          {/* price */}
-          <div className="text-sm md:text-base mt-1">
-            <span className="font-semibold">Price: </span>
-            <span className="font-bold">₹ {h.price}</span>
-          </div>
+                <div className="text-sm md:text-base mt-1">
+                  <span className="font-semibold">Price: </span>
+                  <span className="font-bold">₹ {h.price}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
-    ))}
-  </div>
-</div>
-
-
-
-
 
       {/* POPUP BOOKING FORM */}
       {showForm && (
@@ -396,7 +546,9 @@ export default function HotelPage() {
 
             <iframe
               title="Hotel Map"
-              src={`https://www.google.com/maps?q=${hotel.location}&output=embed`}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(
+                hotel.location
+              )}&output=embed`}
               className="w-full h-80 rounded-lg"
             />
 

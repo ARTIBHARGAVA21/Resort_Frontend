@@ -25,7 +25,7 @@ import BaaghSpa from "../assets/static/Baagh.jpg";
 const hotels = {
 
 // 3 star hotel
-  2: {
+  27: {
     name: "Xomotel",
     images: [Xomotel, BlueRiver, Kyari],
     price: 3500,
@@ -55,7 +55,7 @@ const hotels = {
     roomFacilities: ["Balcony", "Tea Maker", "Heater", "King bed"],
   },
 
-  7: {
+  2: {
     name: "Kyari",
     images: [Kyari, CorbettFun, Baakhli],
     price: 4500,
@@ -70,7 +70,7 @@ const hotels = {
     roomFacilities: ["Eco toiletries", "Cooler", "Desk", "Sit-out"],
   },
 
-  8: {
+  28: {
     name: "Palms",
     images: [Palms, MangoBloom, Xomotel],
     price: 4200,
@@ -112,7 +112,7 @@ const hotels = {
     roomFacilities: ["AC", "TV", "Balcony", "Hot Water"],
   },
 
-  11: {
+  29: {
     name: "Maulik",
     images: [Maulik, MangoBloom, CorbettFun],
     price: 3700,
@@ -185,7 +185,7 @@ const hotels = {
 
   //4 star hotel
 
-16: {
+24: {
     name: "Tiger Camp",
     images: [TigerCamp, RoarResort, BanyanRetreat],
     price: 7500,
@@ -199,7 +199,7 @@ const hotels = {
     roomFacilities: ["AC", "TV", "Mini Fridge", "Room service"],
   },
 
-  17: {
+  25: {
   name: "Roar Resort",
   images: [RoarResort, TigerCamp, BanyanRetreat],
   price: 6500,
@@ -229,7 +229,7 @@ const hotels = {
   ],
 },
 
-18: {
+26: {
   name: "Banyan Retreat",
   images: [BanyanRetreat, RoarResort, LaTigre],
   price: 5500,
@@ -322,7 +322,7 @@ const hotels = {
   ],
 },
 
-1: {
+23: {
   name: "The Golden Tusk",
   images: [GoldenTusk],
   price: 7500,

@@ -1,7 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = "https://resort-project-p1nb.onrender.com/api";
-
+const API_BASE_URL = "https://resort-project-341s.onrender.com/api";
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -11,49 +10,67 @@ const apiClient = axios.create({
   },
 });
 
-const api = {
-  getAllHotels: () => apiClient.get("/all-hotels/"), // Fetch all hotels
-  getHotelById: (id) => apiClient.get(`/all-hotels/${id}/`), // Fetch hotel by ID
+// Helper: normalize star input (3 / "3" / "3-star" → "3-star")
+const normalizeStar = (stars) => {
+  if (typeof stars === "number" || /^[0-9]+$/.test(stars)) {
+    return `${stars}-star`;
+  }
+  return stars; // assume already like "3-star" / "4-star" / "5-star"
+};
 
-  // 5-Star Hotels
-  getFiveStarHotels: () => apiClient.get("/hotels/5-star/"), 
+const api = {
+  // -------- Hotels (All) --------
+  getAllHotels: () => apiClient.get("/all-hotels/"),                 // GET all hotels
+  getHotelById: (id) => apiClient.get(`/all-hotels/${id}/`),         // GET hotel by ID
+
+  createHotel: (data) => apiClient.post("/all-hotels/", data),       // POST new hotel
+  updateHotel: (id, data) => apiClient.put(`/all-hotels/${id}/`, data), // PUT update hotel
+  deleteHotel: (id) => apiClient.delete(`/all-hotels/${id}/`),       // DELETE hotel
+
+  // -------- 5-Star Hotels --------
+  getFiveStarHotels: () => apiClient.get("/hotels/5-star/"),
   getFiveStarHotelById: (id) => apiClient.get(`/hotels/5-star/${id}/`),
 
-  // 4-Star Hotels
-  getFourStarHotels: () => apiClient.get("/hotels/4-star/"), 
+  // -------- 4-Star Hotels --------
+  getFourStarHotels: () => apiClient.get("/hotels/4-star/"),
   getFourStarHotelById: (id) => apiClient.get(`/hotels/4-star/${id}/`),
 
-  // 3-Star Hotels
-  getThreeStarHotels: () => apiClient.get("/hotels/3-star/"), 
+  // -------- 3-Star Hotels --------
+  getThreeStarHotels: () => apiClient.get("/hotels/3-star/"),
   getThreeStarHotelById: (id) => apiClient.get(`/hotels/3-star/${id}/`),
 
-  // Rooms Endpoints
-  getRoomsByHotel: (hotelId, stars) => 
-    apiClient.get(`/hotels/${stars}-star/${hotelId}/rooms/`),
+  // -------- Rooms (by Hotel & Star) --------
+  // stars: 3 | 4 | 5 | "3" | "4" | "5" | "3-star" | "4-star" | "5-star"
+  getRoomsByHotel: (hotelId, stars) => {
+    const starPath = normalizeStar(stars);
+    return apiClient.get(`/hotels/${starPath}/${hotelId}/rooms/`);
+  },
 
-  getRoomById: (hotelId, roomId, stars) => 
-    apiClient.get(`/hotels/${stars}-star/${hotelId}/rooms/${roomId}/`),
-  
-  
-  searchHotels: (query) => 
-  apiClient.get(`/search/?q=${query}`),
+  getRoomById: (hotelId, roomId, stars) => {
+    const starPath = normalizeStar(stars);
+    return apiClient.get(`/hotels/${starPath}/${hotelId}/rooms/${roomId}/`);
+  },
 
+  // -------- Search --------
+  searchHotels: (query) => apiClient.get(`/search/?q=${encodeURIComponent(query)}`),
 
-  // Create, Update, Delete for Hotels (if needed)
-  createHotel: (data) => apiClient.post("/all-hotels/", data),
-  updateHotel: (id, data) => apiClient.put(`/all-hotels/${id}/`, data),
-  deleteHotel: (id) => apiClient.delete(`/all-hotels/${id}/`),
+  // -------- Booking --------
+  bookResort: (data) => apiClient.post("/book-resort/", data),
 
-
-
-//In this I am getting all hotels by the ID
+  // -------- Generic: Hotel details by star + id --------
+  // star should be "5-star" | "4-star" | "3-star" (or 5/4/3, handled by normalizeStar)
   getHotelDetailsByStarAndId: async (star, id) => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/hotels/${star}/${id}/`);
-      return response;
-    } catch (err) {
-      throw new Error(err.message || "Failed to fetch hotel details.");
-    }
+    const starPath = normalizeStar(star);
+    const response = await apiClient.get(`/hotels/${starPath}/${id}/`);
+    return response;
+  },
+
+  // -------- Hotel Map URL --------
+  // Matches: path('hotels/<int:id>/map/', HotelMapLinkAPIView.as_view(), ...)
+  getHotelMapUrlById: async (id) => {
+    const response = await apiClient.get(`/hotels/${id}/map/`);
+    // assuming the API returns { map_url: "https://..." }
+    return response.data.map_url;
   },
 };
 

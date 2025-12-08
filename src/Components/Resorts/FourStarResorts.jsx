@@ -3,35 +3,16 @@ import api from "../../Api/Api";
 import HotelCard from "../../Utils/HotelCard";
 import { Link } from "react-router-dom";
 
-
-// Import images
-import TigerCamp from "../../assets/static/Tiger_Camp.jpg";
-import RoarResort from "../../assets/static/Roar_Resort.jpg";
-import BanyanRetreat from "../../assets/static/Banyan_Retreat.jpg";
-import LaTigre from "../../assets/static/La_Tigre.jpg";
-import LaPerle from "../../assets/static/La_Perle.jpg";
-import Clarissa from "../../assets/static/Clarissa.jpg";
-
 const FourStarResorts = () => {
   const [fourStarHotels, setFourStarHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ⭐ IMAGE MAPPING BASED ON HOTEL ID
-  const hotelImages = {
-    16: TigerCamp,
-    17: RoarResort,
-    18: BanyanRetreat,
-    20: LaTigre,
-    21: LaPerle,
-    22: Clarissa
-  };
-
   useEffect(() => {
     const fetchFourStarHotels = async () => {
       try {
         setLoading(true);
-        const response = await api.getFourStarHotels();
+        const response = await api.getFourStarHotels(); // /hotels/4-star/
         setFourStarHotels(response.data || []);
       } catch (err) {
         setError(err.message || "An error occurred while fetching hotels.");
@@ -58,14 +39,28 @@ const FourStarResorts = () => {
   return (
     <div className="pt-[100px] p-10 bg-white flex flex-col justify-center items-center">
       <h1 className="text-3xl font-bold text-center">4-Star Resorts</h1>
-      <p className="text-lg text-center mt-4">Enjoy comfort and elegance in our 4-star resorts.</p>
+      <p className="text-lg text-center mt-4">
+        Enjoy comfort and elegance in our 4-star resorts.
+      </p>
 
       {error && <p className="text-center mt-4 text-red-500">{error}</p>}
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 shadow-xl border p-6 rounded-3xl">
         {fourStarHotels.map((hotel) => {
-          // ⭐ Pick image by hotel ID, fallback to TigerCamp
-          const img = hotelImages[hotel.id] || TigerCamp;
+          // photos from API
+          const photos = hotel.photos;
+          const primaryImage = Array.isArray(photos) ? photos[0] : photos;
+
+          // compute "from" price from rooms (or hotel.price if present)
+          let fromPrice = hotel.price;
+          if (!fromPrice && Array.isArray(hotel.rooms) && hotel.rooms.length > 0) {
+            const prices = hotel.rooms
+              .map((r) => Number(r.price))
+              .filter((p) => !isNaN(p));
+            if (prices.length > 0) {
+              fromPrice = Math.min(...prices);
+            }
+          }
 
           return (
             <Link
@@ -76,8 +71,8 @@ const FourStarResorts = () => {
               <HotelCard
                 name={hotel.name}
                 location={hotel.location}
-                price={hotel.price}
-                img={img}
+                price={fromPrice}
+                img={primaryImage}
                 rating={hotel.rating}
               />
             </Link>

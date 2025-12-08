@@ -3,30 +3,18 @@ import api from "../../Api/Api";
 import { Link } from "react-router-dom";
 import HotelCard from "../../Utils/HotelCard";
 
-// Import images
-import GoldenTusk from "../../assets/static/Golden_Tusk.jpg";
-import BaaghSpa from "../../assets/static/Baagh.jpg";
-import Skeleton from 'react-loading-skeleton'
-import 'react-loading-skeleton/dist/skeleton.css'
-
 const FiveStarResorts = () => {
   const [fiveStarHotels, setFiveStarHotels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ⭐ IMAGE MAPPING BASED ON HOTEL ID
-  const hotelImages = {
-    1: GoldenTusk,
-    6: BaaghSpa
-  };
-
   useEffect(() => {
     const fetchFiveStarHotels = async () => {
       try {
         setLoading(true);
-        const response = await api.getFiveStarHotels(); 
+        const response = await api.getFiveStarHotels(); // /hotels/5-star/
         setFiveStarHotels(response.data || []);
-        console.log(response);
+        console.log("5-star hotels:", response.data);
       } catch (err) {
         setError(err.message || "An error occurred while fetching hotels.");
       } finally {
@@ -52,26 +40,40 @@ const FiveStarResorts = () => {
   return (
     <div className="pt-[100px] p-10 bg-white flex flex-col justify-center items-center">
       <h1 className="text-3xl font-bold text-center">5-Star Resorts</h1>
-      <p className="text-lg text-center mt-4">Discover luxury at its finest in our 5-star resorts.</p>
+      <p className="text-lg text-center mt-4">
+        Discover luxury at its finest in our 5-star resorts.
+      </p>
 
       {error && <p className="text-center mt-4 text-red-500">{error}</p>}
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 shadow-xl border p-6 rounded-3xl">
         {fiveStarHotels.map((hotel) => {
-          // ⭐ Pick image by hotel ID, fallback to GoldenTusk
-          const img = hotelImages[hotel.id] || GoldenTusk;
+          // 📸 images from API (Hotel.photos – JSONField)
+          const photos = hotel.photos;
+          const primaryImage = Array.isArray(photos) ? photos[0] : photos;
+
+          // 💰 compute "From" price from rooms (or hotel.price if defined)
+          let fromPrice = hotel.price;
+          if (!fromPrice && Array.isArray(hotel.rooms) && hotel.rooms.length > 0) {
+            const prices = hotel.rooms
+              .map((r) => Number(r.price))
+              .filter((p) => !isNaN(p));
+            if (prices.length > 0) {
+              fromPrice = Math.min(...prices);
+            }
+          }
 
           return (
             <Link
               key={hotel.id}
-              to={`/hotels/5-star/${hotel.id}`} 
+              to={`/hotels/5-star/${hotel.id}`}
               className="block"
             >
               <HotelCard
                 name={hotel.name}
                 location={hotel.location}
-                price={hotel.price}
-                img={img}
+                price={fromPrice}
+                img={primaryImage}
                 rating={hotel.rating}
               />
             </Link>

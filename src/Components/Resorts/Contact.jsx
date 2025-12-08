@@ -1,6 +1,54 @@
-import React from "react";
+import React, { useState } from "react";
+import api from "../../Api/Api"; // adjust path if needed
 
 export default function Contact() {
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    message: "",
+  });
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+      // Map contact form → Booking API payload
+      const payload = {
+        full_name: formData.full_name,
+        email: formData.email,
+        additional_requests: formData.message, // store message here
+        form_type: "contact",                  // custom type – your serializer will just ignore
+        date: today,                           // required by Booking model
+      };
+
+      const response = await api.bookResort(payload);
+      console.log("Contact response:", response.data);
+
+      // 🔹 Always show contact-specific message (ignore backend text)
+      alert("Message sent successfully!");
+
+      // reset form
+      setFormData({
+        full_name: "",
+        email: "",
+        message: "",
+      });
+    } catch (error) {
+      console.error("Error submitting contact form:", error.response?.data || error);
+      alert("Failed to send message. Please try again.");
+    }
+  };
+
   return (
     <div className="bg-gray-50 py-12 px-6">
       {/* Header */}
@@ -13,36 +61,50 @@ export default function Contact() {
 
       {/* Contact Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 max-w-6xl mx-auto">
-        
         {/* Left: Contact Form */}
         <div className="bg-white shadow-lg rounded-xl p-8">
           <h3 className="text-2xl font-semibold text-gray-700 mb-6">
             Send us a Message
           </h3>
 
-          <form className="space-y-5">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Full Name</label>
+              <label className="block text-gray-700 font-medium mb-1">
+                Full Name
+              </label>
               <input
                 type="text"
+                name="full_name"
+                value={formData.full_name}
+                onChange={handleChange}
                 placeholder="Enter your name"
                 className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring focus:ring-blue-200"
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Email Address</label>
+              <label className="block text-gray-700 font-medium mb-1">
+                Email Address
+              </label>
               <input
                 type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
                 placeholder="Enter your email"
                 className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring focus:ring-blue-200"
               />
             </div>
 
             <div>
-              <label className="block text-gray-700 font-medium mb-1">Message</label>
+              <label className="block text-gray-700 font-medium mb-1">
+                Message
+              </label>
               <textarea
                 rows="4"
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
                 placeholder="Write your message"
                 className="w-full border border-gray-300 px-4 py-2 rounded-lg focus:ring focus:ring-blue-200"
               ></textarea>
@@ -64,12 +126,14 @@ export default function Contact() {
           </h3>
 
           <p className="text-gray-600 mb-4">
-            Feel free to reach us directly for booking, pricing, or other inquiries.
+            Feel free to reach us directly for booking, pricing, or other
+            inquiries.
           </p>
 
           <div className="space-y-4">
             <p className="text-gray-800">
-              📍 <strong>Address:</strong> Bharat Resort, Near Waterfall Road, Delhi NCR
+              📍 <strong>Address:</strong> Bharat Resort, Near Waterfall Road,
+              Delhi NCR
             </p>
             <p className="text-gray-800">
               📞 <strong>Phone:</strong> +91 98765 43210

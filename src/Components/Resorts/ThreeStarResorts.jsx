@@ -1,18 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../../Api/Api";
 import HotelCard from "../../Utils/HotelCard";
-
-import Xomotel from "../../assets/static/Xomotel.jpg";
-import BlueRiver from "../../assets/static/Corbett_Aroma.jpg";
-import Kyari from "../../assets/static/kabeela.jpg";
-import Palms from "../../assets/static/Palms.jpg";
-import Vanasthali from "../../assets/static/Vanasthali.jpg";
-import Tiger_Groove from "../../assets/static/Tiger_Groove.jpg";
-import Maulik from "../../assets/static/Maulik.jpg";
-import MangoBloom from "../../assets/static/Mango.jpg";
-import CorbettFun from "../../assets/static/Corbett.jpg";
-import Baakhli from "../../assets/static/Baakhli.jpg";
-
 import { Link } from "react-router-dom";
 
 const ThreeStarResorts = () => {
@@ -20,26 +8,11 @@ const ThreeStarResorts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // ⭐ IMAGE MAPPING BASED ON HOTEL ID
-  const hotelImages = {
-    2: Xomotel,
-    4:BlueRiver,
-    7:Kyari,
-    8: Palms,
-    9: Vanasthali,
-    10: Tiger_Groove,
-    11: Maulik,
-    12: MangoBloom,
-    13: CorbettFun,
-    14: MangoBloom,     // repeated intentionally
-    15: Baakhli
-  };
-
   useEffect(() => {
     const fetchThreeStarHotels = async () => {
       try {
         setLoading(true);
-        const response = await api.getThreeStarHotels();
+        const response = await api.getThreeStarHotels(); // /hotels/3-star/
         setThreeStarHotels(response.data || []);
       } catch (err) {
         setError(err.message || "An error occurred while fetching hotels.");
@@ -74,17 +47,38 @@ const ThreeStarResorts = () => {
 
       <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 shadow-xl border p-6 rounded-3xl">
         {threeStarHotels.map((hotel) => {
-          // ⭐ Pick image by hotel ID
-          const img = hotelImages[hotel.id] || Xomotel; // fallback image
+          // 🔹 Use ONLY images coming from API
+          // photos should be a JSON array of URLs from your Django Hotel model
+          const photos = hotel.photos;
+
+          // first image from photos array (no local fallback)
+          const primaryImage = Array.isArray(photos)
+            ? photos[0]
+            : photos; // in case you store a single string
+
+          // (Optional) compute "from" price from rooms, if you want
+          let fromPrice = hotel.price; // if you have a price on hotel
+          if (!fromPrice && Array.isArray(hotel.rooms) && hotel.rooms.length > 0) {
+            const prices = hotel.rooms
+              .map((r) => Number(r.price))
+              .filter((p) => !isNaN(p));
+            if (prices.length > 0) {
+              fromPrice = Math.min(...prices);
+            }
+          }
 
           return (
-            <Link key={hotel.id} to={`/hotels/3-star/${hotel.id}`} className="block">
+            <Link
+              key={hotel.id}
+              to={`/hotels/3-star/${hotel.id}`}
+              className="block"
+            >
               <HotelCard
                 name={hotel.name}
                 location={hotel.location}
-                price={hotel.price}
-                img={img}
-                rating={hotel.rating}
+                price={fromPrice}
+                img={primaryImage}
+                rating={hotel.rating} // if you add rating later in API
               />
             </Link>
           );
